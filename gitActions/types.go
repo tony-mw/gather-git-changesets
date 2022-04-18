@@ -23,3 +23,7 @@ type PREvent struct {
 	True          bool
 	BaseBranch    string
 }
+
+type Loglevel struct {
+	Debug string
+}

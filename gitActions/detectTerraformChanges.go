@@ -6,9 +6,14 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 )
+
+var logger = Loglevel{
+	Debug: os.Getenv("DEBUG"),
+}
 
 func Do(g GitEvent) []string {
 
@@ -40,6 +45,11 @@ func SetTerraformWorkingDirectories(f []string) []string {
 			tfWorkingDirs = append(tfWorkingDirs, filepath.Dir(v))
 		}
 	}
+
+	if len(tfWorkingDirs) == 0 {
+		tfWorkingDirs = append(tfWorkingDirs, "no changes")
+	}
+
 	return tfWorkingDirs
 }
 
@@ -92,7 +102,8 @@ func (t CommitEvent) GatherChangeset(r *git.Repository) []string {
 		return nil
 	})
 
-	fmt.Println(currentCommitHash.Hash, previousCommitHash.Hash)
+	log.Println(currentCommitHash.Hash, previousCommitHash.Hash)
+
 	diff, err := currentCommitHash.Patch(previousCommitHash)
 	if err != nil {
 		log.Fatal(err)
@@ -101,13 +112,13 @@ func (t CommitEvent) GatherChangeset(r *git.Repository) []string {
 	for _, fileList := range filesPatched {
 		from, to := fileList.Files()
 		if fileList.IsBinary() {
-			fmt.Println("Ignoring binary files")
+			log.Println("Ignoring binary files")
 			continue
 		}
 		if from.Path() == to.Path() {
 			filesChanged = append(filesChanged, from.Path())
 		} else {
-			fmt.Println("err")
+			log.Println("err")
 		}
 	}
 
@@ -121,8 +132,8 @@ func GetBaseCommit(repo *git.Repository, baseBranch string) (*object.Commit, err
 	refs, _ := repo.References()
 	refs.ForEach(func(ref *plumbing.Reference) error {
 		if ref.Type() == plumbing.HashReference {
-			if strings.Contains(string(ref.Name()), baseBranch) {
-				fmt.Println(ref.Name(), ref.Hash())
+			if strings.Contains(string(ref.Name()), fmt.Sprintf("refs/heads/%s", baseBranch)) {
+				log.Println(ref.Name(), ref.Hash())
 				myBranchRef = ref.Hash()
 			}
 		}
@@ -136,35 +147,35 @@ func GetBaseCommit(repo *git.Repository, baseBranch string) (*object.Commit, err
 		Force:  true,
 	})
 	if err != nil {
-		fmt.Println("Error checking out branch")
-		fmt.Println(err)
+		log.Println("Error checking out branch")
+		log.Println(err)
 	}
 
 	ref, _ := repo.Log(&git.LogOptions{
 		From:  myBranchRef,
-		Order: git.LogOrderCommitterTime,
 	})
 	counter := 0
 
 	ref.ForEach(func(c *object.Commit) error {
 		if counter == 0 {
-			fmt.Println("From Main\n", c)
+			log.Println("From Main\n", c)
 			currentCommitHash = c
 		}
 		counter += 1
 		return nil
 	})
-
 	return currentCommitHash, nil
 }
 
 func (r PREvent) GatherChangeset(repo *git.Repository) []string {
 	var filesChanged []string
 	var currentCommit *object.Commit
-	//var InitialCommitHash *object.Commit
 	var myBranchRef plumbing.Hash
+	var commits []*object.Commit
+	var appendOn bool = true
 
 	currentCommit, err := GetBaseCommit(repo, r.BaseBranch)
+	log.Printf("Base Branch Ref Hash is %s\n", currentCommit.Hash)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -172,7 +183,7 @@ func (r PREvent) GatherChangeset(repo *git.Repository) []string {
 	refs.ForEach(func(ref *plumbing.Reference) error {
 		if ref.Type() == plumbing.HashReference {
 			if strings.Contains(string(ref.Name()), r.TerraformRepo.Branch) {
-				fmt.Println(ref.Name(), ref.Hash())
+				log.Printf("Current Branch Ref name is: %s\n Current Branch Ref Ref Hash is %s\n", ref.Name(), ref.Hash())
 				myBranchRef = ref.Hash()
 			}
 		}
@@ -182,14 +193,18 @@ func (r PREvent) GatherChangeset(repo *git.Repository) []string {
 
 	ref, _ := repo.Log(&git.LogOptions{
 		From:  myBranchRef,
-		Order: git.LogOrderDefault,
-		All:   false,
+		//Order: git.LogOrderCommitterTime,
+		//All: false,
 	})
-	var commits []*object.Commit
-	var appendOn bool = true
+
 	ref.ForEach(func(c *object.Commit) error {
 
-		if c.Hash == currentCommit.Hash {
+		ancestor, _ := c.IsAncestor(currentCommit)
+		if logger.Check() {
+			log.Printf("Is ancestor: %t", ancestor)
+		}
+		if ancestor {
+
 			appendOn = false
 			return nil
 		}
@@ -198,7 +213,7 @@ func (r PREvent) GatherChangeset(repo *git.Repository) []string {
 		}
 		return nil
 	})
-	fmt.Println(commits)
+	log.Println(commits)
 
 	for _, v := range commits {
 		diff, err := v.Patch(currentCommit)
@@ -208,14 +223,14 @@ func (r PREvent) GatherChangeset(repo *git.Repository) []string {
 		filesPatched := diff.FilePatches()
 		for _, fileList := range filesPatched {
 			if fileList.IsBinary() {
-				fmt.Println("Ignoring binary files")
+				log.Println("Ignoring binary files")
 				continue
 			}
 			from, to := fileList.Files()
 			if from.Path() == to.Path() {
 				filesChanged = append(filesChanged, from.Path())
 			} else {
-				fmt.Println("err")
+				log.Println("error - continuing")
 			}
 		}
 	}
