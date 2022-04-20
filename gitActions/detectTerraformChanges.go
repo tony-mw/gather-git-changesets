@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/format/diff"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"log"
 	"os"
@@ -20,8 +21,8 @@ func Do(g GitEvent) []string {
 	repoObject, _ := g.OpenRepo()
 	filesChanged := g.GatherChangeset(repoObject)
 	tfDirs := SetTerraformWorkingDirectories(filesChanged)
-	return tfDirs
 
+	return tfDirs
 }
 
 func SetTerraformWorkingDirectories(f []string) []string {
@@ -30,9 +31,11 @@ func SetTerraformWorkingDirectories(f []string) []string {
 	var dup bool = false
 
 	for _, v := range f {
+
 		if strings.Split(v, "/")[0] != "terraform" {
 			continue
 		}
+
 		for _, directory := range tfWorkingDirs {
 			if directory == filepath.Dir(v) {
 				dup = true
@@ -41,6 +44,7 @@ func SetTerraformWorkingDirectories(f []string) []string {
 				dup = false
 			}
 		}
+
 		if dup != true {
 			tfWorkingDirs = append(tfWorkingDirs, filepath.Dir(v))
 		}
@@ -50,14 +54,19 @@ func SetTerraformWorkingDirectories(f []string) []string {
 		tfWorkingDirs = append(tfWorkingDirs, "no changes")
 	}
 
+	log.Println("Working Dirs are - ", tfWorkingDirs)
+
 	return tfWorkingDirs
 }
 
 func OpenRepoCommon(RepoPath string) (*git.Repository, error) {
+
 	repo, err := git.PlainOpen(RepoPath)
+
 	if err != nil {
 		return nil, err
 	}
+
 	return repo, nil
 }
 
@@ -74,6 +83,7 @@ func (r CommitEvent) OpenRepo() (*git.Repository, error) {
 }
 
 func (r PREvent) OpenRepo() (*git.Repository, error) {
+
 	log.Println("Opening Repo for PR Event")
 
 	repo, err := OpenRepoCommon(r.TerraformRepo.LocalPath)
@@ -84,8 +94,42 @@ func (r PREvent) OpenRepo() (*git.Repository, error) {
 	return repo, nil
 }
 
-func (t CommitEvent) GatherChangeset(r *git.Repository) []string {
+func RetrieveFiles(filesPatched []diff.FilePatch) []string {
+
 	var filesChanged []string
+
+	for _, fileList := range filesPatched {
+		from, to := fileList.Files()
+
+		if fileList.IsBinary() {
+			log.Println("Ignoring binary files")
+			continue
+		}
+
+		if to == nil {
+			log.Println("A new file was created.")
+			filesChanged = append(filesChanged, from.Path())
+			continue
+		}
+
+		if from == nil {
+			log.Println("A file was deleted.")
+			filesChanged = append(filesChanged, to.Path())
+			continue
+		}
+
+		if from.Path() == to.Path() {
+			filesChanged = append(filesChanged, from.Path())
+		} else {
+			log.Println("err")
+		}
+	}
+
+	return filesChanged
+}
+
+func (t CommitEvent) GatherChangeset(r *git.Repository) []string {
+
 	var currentCommitHash *object.Commit
 	var previousCommitHash *object.Commit
 
@@ -99,33 +143,26 @@ func (t CommitEvent) GatherChangeset(r *git.Repository) []string {
 			previousCommitHash = c
 		}
 		counter += 1
+
 		return nil
 	})
 
-	log.Println(currentCommitHash.Hash, previousCommitHash.Hash)
-
+	if logger.Check() {
+		log.Println("Current Commit Hash is: ", currentCommitHash.Hash, "Previous Commit Hash is: ", previousCommitHash.Hash)
+	}
 	diff, err := currentCommitHash.Patch(previousCommitHash)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	filesPatched := diff.FilePatches()
-	for _, fileList := range filesPatched {
-		from, to := fileList.Files()
-		if fileList.IsBinary() {
-			log.Println("Ignoring binary files")
-			continue
-		}
-		if from.Path() == to.Path() {
-			filesChanged = append(filesChanged, from.Path())
-		} else {
-			log.Println("err")
-		}
-	}
+	filesChanged := RetrieveFiles(filesPatched)
 
 	return filesChanged
 }
 
 func GetBaseCommit(repo *git.Repository, baseBranch string) (*object.Commit, error) {
+
 	var currentCommitHash *object.Commit
 	var myBranchRef plumbing.Hash
 
@@ -152,7 +189,7 @@ func GetBaseCommit(repo *git.Repository, baseBranch string) (*object.Commit, err
 	}
 
 	ref, _ := repo.Log(&git.LogOptions{
-		From:  myBranchRef,
+		From: myBranchRef,
 	})
 	counter := 0
 
@@ -168,6 +205,7 @@ func GetBaseCommit(repo *git.Repository, baseBranch string) (*object.Commit, err
 }
 
 func (r PREvent) GatherChangeset(repo *git.Repository) []string {
+
 	var filesChanged []string
 	var currentCommit *object.Commit
 	var myBranchRef plumbing.Hash
@@ -179,6 +217,7 @@ func (r PREvent) GatherChangeset(repo *git.Repository) []string {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	refs, _ := repo.References()
 	refs.ForEach(func(ref *plumbing.Reference) error {
 		if ref.Type() == plumbing.HashReference {
@@ -192,46 +231,44 @@ func (r PREvent) GatherChangeset(repo *git.Repository) []string {
 	})
 
 	ref, _ := repo.Log(&git.LogOptions{
-		From:  myBranchRef,
-		//Order: git.LogOrderCommitterTime,
-		//All: false,
+		From: myBranchRef,
 	})
 
 	ref.ForEach(func(c *object.Commit) error {
 
 		ancestor, _ := c.IsAncestor(currentCommit)
+
 		if logger.Check() {
 			log.Printf("Is ancestor: %t", ancestor)
 		}
 		if ancestor {
-
 			appendOn = false
 			return nil
 		}
 		if appendOn {
 			commits = append(commits, c)
 		}
+
 		return nil
 	})
-	log.Println(commits)
+
+	if logger.Check() {
+		log.Println(commits)
+	}
 
 	for _, v := range commits {
-		diff, err := v.Patch(currentCommit)
+
+		d, err := v.Patch(currentCommit)
 		if err != nil {
 			log.Fatal(err)
 		}
-		filesPatched := diff.FilePatches()
-		for _, fileList := range filesPatched {
-			if fileList.IsBinary() {
-				log.Println("Ignoring binary files")
-				continue
-			}
-			from, to := fileList.Files()
-			if from.Path() == to.Path() {
-				filesChanged = append(filesChanged, from.Path())
-			} else {
-				log.Println("error - continuing")
-			}
+
+		filesPatched := d.FilePatches()
+
+		f := RetrieveFiles(filesPatched)
+
+		for _, v := range f {
+			filesChanged = append(filesChanged, v)
 		}
 	}
 

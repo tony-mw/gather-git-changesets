@@ -8,15 +8,15 @@ import (
 
 // Commit Main Example
 // export GIT_EVENT=commit_main
-// export REPO_URL=https://bitbucket.dentsplysirona.com/scm/atopoc/cirrus-poc-gitops.git
-// export LOCAL_REPO_PATH="/Users/tonyprestifilippo/git/dentsply/cirru/cirrus-poc-gitops"
+// export REPO_URL=https://bitbucket.dentsplysirona.com/scm/atopoc/cirrus-poc-terraform.git
+// export LOCAL_REPO_PATH="/Users/tonyprestifilippo/git/dentsply/cirru/cirrus-poc-terraform"
 // export BRANCH=main
 
 // PR Main Example
 // export GIT_EVENT=pr_main
 // export REPO_URL=https://bitbucket.dentsplysirona.com/scm/atopoc/cirrus-poc-gitops.git
 // export LOCAL_REPO_PATH="/Users/tonyprestifilippo/git/dentsply/cirru/cirrus-poc-gitops"
-// export BRANCH=feature/test2
+// export BRANCH=wip
 // export BASE_BRANCH=main
 
 var ce gitActions.CommitEvent
