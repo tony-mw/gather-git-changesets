@@ -14,9 +14,9 @@ import (
 
 // PR Main Example
 // export GIT_EVENT=pr_main
-// export REPO_URL=https://bitbucket.dentsplysirona.com/scm/atopoc/cirrus-poc-gitops.git
-// export LOCAL_REPO_PATH="/Users/tonyprestifilippo/git/dentsply/cirru/cirrus-poc-gitops"
-// export BRANCH=wip
+// export REPO_URL=https://bitbucket.dentsplysirona.com/scm/atopoc/cirrus-poc-terraform.git
+// export LOCAL_REPO_PATH="/Users/tonyprestifilippo/git/dentsply/cirru/cirrus-poc-terraform"
+// export BRANCH=feature/bug-tests
 // export BASE_BRANCH=main
 
 var ce gitActions.CommitEvent
