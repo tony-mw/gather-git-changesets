@@ -6,6 +6,7 @@ COPY . .
 
 RUN go mod download
 
-RUN go build -o ./go-git-action
+#RUN go build -o ./go-git-action
+RUN go install gitActions
 
-CMD [ "./go-git-action" ]
+ENTRYPOINT [ "gitActions" ]
