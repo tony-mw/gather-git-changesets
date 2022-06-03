@@ -7,57 +7,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/format/diff"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"log"
-	"os"
-	"path/filepath"
 	"strings"
 )
-
-var logger = Loglevel{
-	Debug: os.Getenv("DEBUG"),
-}
-
-func Do(g GitEvent) []string {
-
-	repoObject, _ := g.OpenRepo()
-	filesChanged := g.GatherChangeset(repoObject)
-	tfDirs := SetTerraformWorkingDirectories(filesChanged)
-
-	return tfDirs
-}
-
-func SetTerraformWorkingDirectories(f []string) []string {
-
-	var tfWorkingDirs []string
-	var dup bool = false
-
-	for _, v := range f {
-
-		if strings.Split(v, "/")[0] != "terraform" {
-			continue
-		}
-
-		for _, directory := range tfWorkingDirs {
-			if directory == filepath.Dir(v) {
-				dup = true
-				break
-			} else {
-				dup = false
-			}
-		}
-
-		if dup != true {
-			tfWorkingDirs = append(tfWorkingDirs, filepath.Dir(v))
-		}
-	}
-
-	if len(tfWorkingDirs) == 0 {
-		tfWorkingDirs = append(tfWorkingDirs, "no changes")
-	}
-
-	log.Println("Working Dirs are - ", tfWorkingDirs)
-
-	return tfWorkingDirs
-}
 
 func OpenRepoCommon(RepoPath string) (*git.Repository, error) {
 
