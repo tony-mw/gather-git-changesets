@@ -26,6 +26,7 @@ to quickly create a Cobra application.`,
 		repo_path, _ := cmd.Flags().GetString("repo-path")
 		branch, _ := cmd.Flags().GetString("branch")
 		root_dir, _ := cmd.Flags().GetString("root-dir")
+		base_branch, _ := cmd.Flags().GetString("base-branch")
 		fmt.Println(repo_path, branch, root_dir)
 		if len(repo_path) > 0 {
 			os.Setenv("LOCAL_REPO_PATH", repo_path)
@@ -36,6 +37,9 @@ to quickly create a Cobra application.`,
 		if len(root_dir) > 0 {
 			os.Setenv("ROOT_DIR", root_dir)
 		}
+		if len(base_branch) > 0 {
+			os.Setenv("BASE_BRANCH", base_branch)
+		}
 	},
 }
 
@@ -43,6 +47,7 @@ func init() {
 	rootCmd.AddCommand(commitMainCmd)
 	commitMainCmd.Flags().String("repo-path", "repo-path", "The path to the repo")
 	commitMainCmd.Flags().String("branch", "branch", "The branch to check")
+	commitMainCmd.Flags().String("base-branch", "base-branch", "The base-branch to check if needed")
 	commitMainCmd.Flags().String("root-dir", "root-dir", "Root directory to look for changes")
 
 
