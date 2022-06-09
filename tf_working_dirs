@@ -1,18 +1,20 @@
+services/device
+services/job
+services/device
+services/job
+services/device
+services/job
+services/device
+services/job
 no changes
-no changes
-no changes
-terraform/test1/dev
-terraform/test1/dev
-terraform/test1/dev
-terraform/test1/dev
-terraform/test1/dev
-terraform/test1/dev
-terraform/test1/dev
-terraform/test1/dev
-no changes
-no changes
-no changes
-no changes
-no changes
-no changes
-terraform/test1/dev
+services/device
+services/job
+services/device
+services/job
+services/device
+services/job
+services/device
+services/job
+services/acquisition
+services/device
+services/job

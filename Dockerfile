@@ -9,4 +9,4 @@ RUN go mod download
 #RUN go build -o ./go-git-action
 RUN go install gitActions
 
-ENTRYPOINT [ "gitActions" ]
+ENTRYPOINT [ "/bin/sh" ]

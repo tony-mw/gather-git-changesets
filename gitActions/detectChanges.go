@@ -1,6 +1,7 @@
 package gitActions
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -20,17 +21,43 @@ func Do(g GitEvent) []string {
 	return Dirs
 }
 
+func FormatDir(d string) string {
+	var finalDir string
+	if logger.Check() {
+		log.Println("Root dir is services")
+	}
+	serviceName := strings.Split(filepath.Dir(d), "/")[1]
+	if logger.Check() {
+		log.Println("Service name is: ", serviceName)
+	}
+	finalDir = strings.Join([]string{fmt.Sprintf("%s", os.Getenv("ROOT_DIR")), serviceName}, "/")
+	if logger.Check() {
+		log.Println("Final dir is: ", finalDir)
+	}
+	return finalDir
+}
+
 func SetWorkingDirectories(f []string) []string {
 
 	var WorkingDirs []string
 	var dup bool = false
 	for _, v := range f {
+		var finalDir string
+
 		if strings.Split(v, "/")[0] != os.Getenv("ROOT_DIR") {
 			continue
 		}
 		for _, directory := range WorkingDirs {
-			if directory == filepath.Dir(v) {
+			if os.Getenv("ROOT_DIR") == "services" {
+				finalDir = FormatDir(v)
+			} else {
+				finalDir = filepath.Dir(v)
+			}
+			if directory == finalDir {
 				dup = true
+				if logger.Check() {
+					log.Println("There was a dup ", directory, finalDir)
+				}
 				break
 			} else {
 				dup = false
@@ -38,7 +65,14 @@ func SetWorkingDirectories(f []string) []string {
 		}
 
 		if dup != true {
-			WorkingDirs = append(WorkingDirs, filepath.Dir(v))
+			if len(finalDir) == 0 {
+				if os.Getenv("ROOT_DIR") == "services" {
+					finalDir = FormatDir(v)
+				} else {
+					finalDir = filepath.Dir(v)
+				}
+			}
+			WorkingDirs = append(WorkingDirs, finalDir)
 		}
 	}
 
