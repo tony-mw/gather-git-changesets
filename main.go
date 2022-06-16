@@ -28,19 +28,41 @@ import (
 var ce gitActions.CommitEvent
 var pre gitActions.PREvent
 
+var terraformRepoDirectories = []string{"terraform"}
+var applicationRepoDirectories = []string{"services", "pkg", "k8s"}
+
+func checkRepoType() gitActions.RepoType {
+	switch os.Getenv("REPO_TYPE") {
+	case "terraform":
+		return gitActions.RepoType{
+			Kind:        "terraform",
+			DirsToCheck: terraformRepoDirectories,
+		}
+	case "app":
+		return gitActions.RepoType{
+			Kind:        "app",
+			DirsToCheck: applicationRepoDirectories,
+		}
+	}
+	return gitActions.RepoType{}
+}
+
 func main() {
 
 	cmd.Execute()
 
 	log.Println("Starting program to check git status")
 
+	repoType := checkRepoType()
+
 	switch os.Getenv("GIT_EVENT") {
 	case "commit_main":
 		ce = gitActions.CommitEvent{
-			TerraformRepo: gitActions.Repo{
+			Repo: gitActions.Repo{
 				Url:       os.Getenv("REPO_URL"),
 				LocalPath: os.Getenv("LOCAL_REPO_PATH"),
 				Branch:    os.Getenv("BRANCH"),
+				RepoType:  repoType,
 			},
 			True: true,
 		}
@@ -48,15 +70,16 @@ func main() {
 		gitActions.FileWriter(tfDirs)
 	case "pr_main":
 		pre = gitActions.PREvent{
-			TerraformRepo: gitActions.Repo{
+			Repo: gitActions.Repo{
 				Url:       os.Getenv("REPO_URL"),
 				LocalPath: os.Getenv("LOCAL_REPO_PATH"),
 				Branch:    os.Getenv("BRANCH"),
+				RepoType:  repoType,
 			},
 			BaseBranch: os.Getenv("BASE_BRANCH"),
 			True:       true,
 		}
-		tfDirs := gitActions.Do(pre)
-		gitActions.FileWriter(tfDirs)
+		Dirs := gitActions.Do(pre)
+		gitActions.FileWriter(Dirs)
 	}
 }
