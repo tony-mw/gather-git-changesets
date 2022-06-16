@@ -13,42 +13,68 @@ var logger = Loglevel{
 }
 
 func Do(g GitEvent) []string {
-
 	repoObject, _ := g.OpenRepo()
 	filesChanged := g.GatherChangeset(repoObject)
-	Dirs := SetWorkingDirectories(filesChanged)
+	Dirs := g.SetWorkingDirectories(filesChanged)
 
 	return Dirs
 }
 
 func FormatDir(d string) string {
+	fmt.Println("Formatting: ", d)
 	var finalDir string
 	if logger.Check() {
-		log.Println("Root dir is services")
+		log.Println("Formatting")
 	}
+	tld :=  strings.Split(filepath.Dir(d), "/")[0]
 	serviceName := strings.Split(filepath.Dir(d), "/")[1]
 	if logger.Check() {
-		log.Println("Service name is: ", serviceName)
+		log.Println("Name is: ", serviceName)
 	}
-	finalDir = strings.Join([]string{fmt.Sprintf("%s", os.Getenv("ROOT_DIR")), serviceName}, "/")
+	finalDir = strings.Join([]string{fmt.Sprintf("%s", tld), serviceName}, "/")
 	if logger.Check() {
 		log.Println("Final dir is: ", finalDir)
 	}
 	return finalDir
 }
 
-func SetWorkingDirectories(f []string) []string {
+func (p PREvent) SetWorkingDirectories(f []string) []string {
+	return SetWorkingDirectoriesCommon(f, p.Repo.RepoType)
+}
 
+func (c CommitEvent) SetWorkingDirectories(f []string) []string {
+	return SetWorkingDirectoriesCommon(f, c.Repo.RepoType)
+}
+
+func contains(s string, sl []string) bool {
+	for _, v := range sl {
+		if s == v {
+			return true
+		}
+	}
+	return false
+}
+
+func SetWorkingDirectoriesCommon(f []string, p RepoType) []string {
+	fmt.Println(f)
 	var WorkingDirs []string
 	var dup bool = false
+	var format bool
+	if p.Kind == "app" {
+		fmt.Println("app")
+		format = true
+	} else if p.Kind == "terraform" {
+		format = false
+	}
+
 	for _, v := range f {
 		var finalDir string
-
-		if strings.Split(v, "/")[0] != os.Getenv("ROOT_DIR") {
+		if contains(strings.Split(v, "/")[0], p.DirsToCheck) == false {
+			fmt.Println("skipping")
 			continue
 		}
 		for _, directory := range WorkingDirs {
-			if os.Getenv("ROOT_DIR") == "services" {
+			if format {
 				finalDir = FormatDir(v)
 			} else {
 				finalDir = filepath.Dir(v)
@@ -66,7 +92,8 @@ func SetWorkingDirectories(f []string) []string {
 
 		if dup != true {
 			if len(finalDir) == 0 {
-				if os.Getenv("ROOT_DIR") == "services" {
+				fmt.Println("first")
+				if format {
 					finalDir = FormatDir(v)
 				} else {
 					finalDir = filepath.Dir(v)

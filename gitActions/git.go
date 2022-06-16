@@ -22,11 +22,11 @@ func OpenRepoCommon(RepoPath string) (*git.Repository, error) {
 	return repo, nil
 }
 
-func (r CommitEvent) OpenRepo() (*git.Repository, error) {
+func (c CommitEvent) OpenRepo() (*git.Repository, error) {
 
 	log.Println("Opening repo for Commit Event")
 
-	repo, err := OpenRepoCommon(r.TerraformRepo.LocalPath)
+	repo, err := OpenRepoCommon(c.Repo.LocalPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,11 +34,11 @@ func (r CommitEvent) OpenRepo() (*git.Repository, error) {
 	return repo, nil
 }
 
-func (r PREvent) OpenRepo() (*git.Repository, error) {
+func (p PREvent) OpenRepo() (*git.Repository, error) {
 
 	log.Println("Opening Repo for PR Event")
 
-	repo, err := OpenRepoCommon(r.TerraformRepo.LocalPath)
+	repo, err := OpenRepoCommon(p.Repo.LocalPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func RetrieveFiles(filesPatched []diff.FilePatch) []string {
 	return filesChanged
 }
 
-func (t CommitEvent) GatherChangeset(r *git.Repository) []string {
+func (c CommitEvent) GatherChangeset(r *git.Repository) []string {
 
 	var currentCommitHash *object.Commit
 	var previousCommitHash *object.Commit
@@ -158,7 +158,7 @@ func GetBaseCommit(repo *git.Repository, baseBranch string) (*object.Commit, err
 	return currentCommitHash, nil
 }
 
-func (r PREvent) GatherChangeset(repo *git.Repository) []string {
+func (p PREvent) GatherChangeset(repo *git.Repository) []string {
 
 	var filesChanged []string
 	var currentCommit *object.Commit
@@ -166,7 +166,7 @@ func (r PREvent) GatherChangeset(repo *git.Repository) []string {
 	var commits []*object.Commit
 	var appendOn bool = true
 
-	currentCommit, err := GetBaseCommit(repo, r.BaseBranch)
+	currentCommit, err := GetBaseCommit(repo, p.BaseBranch)
 	log.Printf("Base Branch Ref Hash is %s\n", currentCommit.Hash)
 	if err != nil {
 		log.Fatal(err)
@@ -176,14 +176,15 @@ func (r PREvent) GatherChangeset(repo *git.Repository) []string {
 	refs.ForEach(func(ref *plumbing.Reference) error {
 		//if ref.Type() == plumbing.HashReference {
 		//	if strings.Contains(string(ref.Name()),"refs/heads") {
-		//		if strings.Contains(string(ref.Name()), r.TerraformRepo.Branch) {
+		//		if strings.Contains(string(ref.Name()), r.Repo.Branch) {
 		//			log.Printf("Current Branch Ref name is: %s\n Current Branch Ref Ref Hash is %s\n", ref.Name(), ref.Hash())
 		//			myBranchRef = ref.Hash()
 		//		}
 		//	}
 		//}
 		if ref.Type() == plumbing.HashReference {
-			if strings.Contains(string(ref.Name()), r.TerraformRepo.Branch) {
+			fmt.Println("Branch is: ", p.Repo.Branch)
+			if strings.Contains(string(ref.Name()), p.Repo.Branch) {
 				log.Printf("Current Branch Ref name is: %s\n Current Branch Ref Ref Hash is %s\n", ref.Name(), ref.Hash())
 				myBranchRef = ref.Hash()
 			}
