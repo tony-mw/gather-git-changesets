@@ -9,7 +9,7 @@ import (
 func FileWriter(dirs []string) {
 	for _, d := range dirs {
 
-		f, err := os.OpenFile("changeSet", os.O_CREATE|os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile("changeSet", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Println(err)
 		}
