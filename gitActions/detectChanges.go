@@ -21,7 +21,6 @@ func Do(g GitEvent) []string {
 }
 
 func FormatDir(d string) string {
-	fmt.Println("Formatting: ", d)
 	var finalDir string
 	if logger.Check() {
 		log.Println("Formatting")
@@ -55,13 +54,26 @@ func contains(s string, sl []string) bool {
 	return false
 }
 
+func checkDir(fp string) bool {
+	valid, err := os.ReadDir(fmt.Sprintf("%s/%s", os.Getenv("LOCAL_REPO_PATH"), fp))
+	if err != nil {
+		if logger.Check() {
+			log.Println("Directory ", fp, " was deleted")
+		}
+		return false
+	}
+	if logger.Check() {
+		log.Println("Valid directory: ", valid)
+	}
+	return true
+
+}
+
 func SetWorkingDirectoriesCommon(f []string, p RepoType) []string {
-	fmt.Println(f)
 	var WorkingDirs []string
 	var dup bool = false
 	var format bool
 	if p.Kind == "app" {
-		fmt.Println("app")
 		format = true
 	} else if p.Kind == "terraform" {
 		format = false
@@ -70,7 +82,6 @@ func SetWorkingDirectoriesCommon(f []string, p RepoType) []string {
 	for _, v := range f {
 		var finalDir string
 		if contains(strings.Split(v, "/")[0], p.DirsToCheck) == false {
-			fmt.Println("skipping")
 			continue
 		}
 		for _, directory := range WorkingDirs {
@@ -92,14 +103,16 @@ func SetWorkingDirectoriesCommon(f []string, p RepoType) []string {
 
 		if dup != true {
 			if len(finalDir) == 0 {
-				fmt.Println("first")
 				if format {
 					finalDir = FormatDir(v)
 				} else {
 					finalDir = filepath.Dir(v)
 				}
 			}
-			WorkingDirs = append(WorkingDirs, finalDir)
+
+			if checkDir(finalDir) {
+				WorkingDirs = append(WorkingDirs, finalDir)
+			}
 		}
 	}
 

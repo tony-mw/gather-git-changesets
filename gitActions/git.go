@@ -124,7 +124,9 @@ func GetBaseCommit(repo *git.Repository, baseBranch string) (*object.Commit, err
 	refs.ForEach(func(ref *plumbing.Reference) error {
 		if ref.Type() == plumbing.HashReference {
 			if strings.Contains(string(ref.Name()), fmt.Sprintf("refs/heads/%s", baseBranch)) {
-				log.Println(ref.Name(), ref.Hash())
+				if logger.Check() {
+					log.Println(ref.Name(), ref.Hash())
+				}
 				myBranchRef = ref.Hash()
 			}
 		}
@@ -183,7 +185,6 @@ func (p PREvent) GatherChangeset(repo *git.Repository) []string {
 		//	}
 		//}
 		if ref.Type() == plumbing.HashReference {
-			fmt.Println("Branch is: ", p.Repo.Branch)
 			if strings.Contains(string(ref.Name()), p.Repo.Branch) {
 				log.Printf("Current Branch Ref name is: %s\n Current Branch Ref Ref Hash is %s\n", ref.Name(), ref.Hash())
 				myBranchRef = ref.Hash()
