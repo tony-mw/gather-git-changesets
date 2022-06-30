@@ -7,6 +7,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/format/diff"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"log"
+	"os"
 	"strings"
 	"time"
 )
@@ -25,7 +26,6 @@ func OpenRepoCommon(RepoPath string) (*git.Repository, error) {
 func (c CommitEvent) OpenRepo() (*git.Repository, error) {
 
 	log.Println("Opening repo for Commit Event")
-
 	repo, err := OpenRepoCommon(c.Repo.LocalPath)
 	if err != nil {
 		log.Fatal(err)
@@ -86,8 +86,28 @@ func (c CommitEvent) GatherChangeset(r *git.Repository) []string {
 
 	var currentCommitHash *object.Commit
 	var previousCommitHash *object.Commit
+	var myBranchRef plumbing.Hash
 
-	ref, _ := r.Log(&git.LogOptions{})
+	refs, _ := r.References()
+	refs.ForEach(func(ref *plumbing.Reference) error {
+		if ref.Type() == plumbing.HashReference {
+			if strings.Contains(string(ref.Name()), fmt.Sprintf("refs/heads/%s", os.Getenv("BRANCH"))) {
+				fmt.Println("REF IS: ", ref.Name())
+				if logger.Check() {
+					log.Println(ref.Name(), ref.Hash())
+				}
+				myBranchRef = ref.Hash()
+			}
+		}
+
+		return nil
+	})
+	if myBranchRef.String() == "0000000000000000000000000000000000000000" {
+		log.Fatal("Ref doesn't exist")
+	}
+	ref, _ := r.Log(&git.LogOptions{
+		From: myBranchRef,
+	})
 	counter := 0
 
 	ref.ForEach(func(c *object.Commit) error {
