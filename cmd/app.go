@@ -38,7 +38,9 @@ to quickly create a Cobra application.`,
 			os.Setenv("BRANCH", branch)
 			fmt.Println("Set branch env var to: ", branch)
 		}
+		fmt.Println(baseBranch)
 		if len(baseBranch) > 0 {
+			fmt.Println("Base Branch is: ", baseBranch)
 			os.Setenv("BASE_BRANCH", baseBranch)
 			os.Setenv("GIT_EVENT", "pr_main")
 		} else {
@@ -50,9 +52,9 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(appCmd)
 
-	appCmd.Flags().String("repo-path", "repo-path", "The path to the repo")
-	appCmd.Flags().String("branch", "branch", "The branch to check")
-	appCmd.Flags().String("base-branch", "base-branch", "The base-branch to check if needed")
+	appCmd.Flags().String("repo-path", "", "The path to the repo")
+	appCmd.Flags().String("branch", "", "The branch to check")
+	appCmd.Flags().String("base-branch", "", "The base-branch to check if needed")
 
 	// Here you will define your flags and configuration settings.
 
