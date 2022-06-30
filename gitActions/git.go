@@ -1,6 +1,7 @@
 package gitActions
 
 import (
+	"errors"
 	"fmt"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -11,6 +12,8 @@ import (
 	"strings"
 	"time"
 )
+
+var myBranchRef plumbing.Hash
 
 func OpenRepoCommon(RepoPath string) (*git.Repository, error) {
 
@@ -82,16 +85,12 @@ func RetrieveFiles(filesPatched []diff.FilePatch) []string {
 	return filesChanged
 }
 
-func (c CommitEvent) GatherChangeset(r *git.Repository) []string {
-
-	var currentCommitHash *object.Commit
-	var previousCommitHash *object.Commit
-	var myBranchRef plumbing.Hash
+func GetRef(p string, r *git.Repository) (plumbing.Hash, error) {
 
 	refs, _ := r.References()
 	refs.ForEach(func(ref *plumbing.Reference) error {
 		if ref.Type() == plumbing.HashReference {
-			if strings.Contains(string(ref.Name()), fmt.Sprintf("refs/heads/%s", os.Getenv("BRANCH"))) {
+			if strings.Contains(string(ref.Name()), fmt.Sprintf("%s/%s", p,  os.Getenv("BRANCH"))) {
 				fmt.Println("REF IS: ", ref.Name())
 				if logger.Check() {
 					log.Println(ref.Name(), ref.Hash())
@@ -99,12 +98,40 @@ func (c CommitEvent) GatherChangeset(r *git.Repository) []string {
 				myBranchRef = ref.Hash()
 			}
 		}
-
 		return nil
 	})
 	if myBranchRef.String() == "0000000000000000000000000000000000000000" {
-		log.Fatal("Ref doesn't exist")
+		return myBranchRef, errors.New("No ref")
+	} else {
+		w, _ := r.Worktree()
+
+		err := w.Checkout(&git.CheckoutOptions{
+			Branch: plumbing.ReferenceName(fmt.Sprintf("%s/%s", p, os.Getenv("BRANCH"))),
+			Force:  true,
+		})
+		if err != nil {
+			log.Println("Error checking out branch")
+			log.Println(err)
+		}
+
+		return myBranchRef, nil
 	}
+}
+
+func (c CommitEvent) GatherChangeset(r *git.Repository) []string {
+
+	var currentCommitHash *object.Commit
+	var previousCommitHash *object.Commit
+
+	myBranchRef, err := GetRef("refs/heads", r)
+	if err != nil {
+		log.Println(err)
+		myBranchRef, err = GetRef("refs/remotes/origin", r)
+		if err != nil {
+			log.Fatal("Ref really doesnt exist")
+		}
+	}
+
 	ref, _ := r.Log(&git.LogOptions{
 		From: myBranchRef,
 	})
@@ -160,8 +187,17 @@ func GetBaseCommit(repo *git.Repository, baseBranch string) (*object.Commit, err
 		Force:  true,
 	})
 	if err != nil {
-		log.Println("Error checking out branch")
+		log.Println("Error checking out branch from head")
 		log.Println(err)
+
+		err = w.Checkout(&git.CheckoutOptions{
+			Branch: plumbing.ReferenceName(fmt.Sprintf("refs/remotes/origin/%s", baseBranch)),
+			Force:  true,
+		})
+
+		if err != nil {
+			log.Fatal("Branch doesn't exist")
+		}
 	}
 
 	ref, _ := repo.Log(&git.LogOptions{

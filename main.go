@@ -29,7 +29,7 @@ var ce gitActions.CommitEvent
 var pre gitActions.PREvent
 
 var terraformRepoDirectories = []string{"terraform"}
-var applicationRepoDirectories = []string{"services", "pkg", "k8s"}
+var applicationRepoDirectories = []string{"services", "pkg", "k8s", "apps"}
 
 func checkRepoType() gitActions.RepoType {
 	switch os.Getenv("REPO_TYPE") {
