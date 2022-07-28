@@ -21,11 +21,19 @@ func Do(g GitEvent) []string {
 }
 
 func FormatDir(d string) string {
+	fmt.Println("Dir is: ", d)
 	var finalDir string
 	if logger.Check() {
 		log.Println("Formatting")
 	}
-	tld :=  strings.Split(filepath.Dir(d), "/")[0]
+	splitDir :=  strings.Split(filepath.Dir(d), "/")
+	tld := splitDir[0]
+	if logger.Check() {
+		log.Println("TLD is: ", tld, "\n", "Len is: ", len(splitDir))
+	}
+	if len(splitDir) == 1 {
+		return tld
+	}
 	serviceName := strings.Split(filepath.Dir(d), "/")[1]
 	if logger.Check() {
 		log.Println("Name is: ", serviceName)
