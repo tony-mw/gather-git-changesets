@@ -140,8 +140,10 @@ func (c CommitEvent) GatherChangeset(r *git.Repository) []string {
 	ref.ForEach(func(c *object.Commit) error {
 		if counter == 0 {
 			currentCommitHash = c
+			fmt.Println("current commit is: ",c.Message)
 		} else if counter == 1 {
 			previousCommitHash = c
+			fmt.Println("current commit is: ",c.Message)
 		}
 		counter += 1
 
