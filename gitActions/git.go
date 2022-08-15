@@ -143,7 +143,7 @@ func (c CommitEvent) GatherChangeset(r *git.Repository) []string {
 			fmt.Println("current commit is: ",c.Message)
 		} else if counter == 1 {
 			previousCommitHash = c
-			fmt.Println("current commit is: ",c.Message)
+			fmt.Println("last commit is: ",c.Message)
 		}
 		counter += 1
 
